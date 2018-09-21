@@ -87,6 +87,10 @@ pub struct Metadata {
     pub baseline: bool,
     /// Whether this image uses a differential encoding.
     pub differential: bool,
+    /// Whether this image has JFIF application marker.
+    pub jfif: bool,
+    /// Whether this image has EXIF application marker.
+    pub exif: bool,
 }
 
 fn find_marker<R: ?Sized, F>(r: &mut R, name: &str, mut matcher: F) -> Result<u8>
@@ -112,7 +116,13 @@ impl LoadableMetadata for Metadata {
 
         // XXX: do we need to check for APP0 JFIF marker? This doesn't seem strictly necessary
         // XXX: to me, and it seems that other interchange formats are also possible.
-
+        // 0xe0: Check for JPEG File Interchange Format(JFIF)
+        // 0xe1: Check for Exchangable Image File Format(EXIF)
+        // An image may have both markers, so we should check through all bytes(or at least up to
+        // the image start?)
+        try!(find_marker(r, "JFIF", |m| m == 0xe0));
+        try!(find_marker(r, "EXIF", |m| m == 0xe1));
+        
         // read SOF marker, it must also be present in all JPEG files
         let marker = try!(find_marker(r, "SOF", is_sof_marker));
 
